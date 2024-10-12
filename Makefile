@@ -6,15 +6,18 @@
 #    By: mcutura <mcutura@student.42berlin.de>      +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/08/29 01:52:12 by mcutura           #+#    #+#              #
-#    Updated: 2024/08/29 21:33:16 by mcutura          ###   ########.fr        #
+#    Updated: 2024/10/09 00:03:46 by mcutura          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME := libasm.a
 
 SRCS := ft_strlen ft_write ft_read ft_strcpy ft_strcmp ft_strdup
+BONUSSRC := ft_list_push_front ft_list_size ft_list_remove_if ft_list_sort
+BONUSSRC += ft_atoi_base
 
 TESTER := tester
+BONUSTESTER := tester_bonus
 
 AS := nasm
 ASFLAGS := -f elf64
@@ -23,7 +26,7 @@ AR := ar
 ARFLAGS := rcs
 
 CC := cc
-CFLAGS := -Wall -Wextra
+CFLAGS := -Wall -Wextra -Werror -ggdb3
 LDFLAGS := -L. -lasm
 
 # Colors
@@ -37,7 +40,7 @@ cyn := \033[01;36m
 wht := \033[01;37m
 clr := \033[00m
 
-.PHONY: all clean fclean re check debug
+.PHONY: all clean fclean re check debug bonus
 
 $(NAME): $(SRCS:%=%.o)
 	$(AR) $(ARFLAGS) $(NAME) $(SRCS:%=%.o)
@@ -45,11 +48,13 @@ $(NAME): $(SRCS:%=%.o)
 %.o: %.s
 	$(AS) $(ASFLAGS) $^ -o $@
 
-all: $(NAME)	# Compile all targets
+all: $(NAME) bonus	# Compile all targets
+bonus: $(BONUSSRC:%=%.o)	# Compile and add bonus to the library
+	$(AR) $(ARFLAGS) $(NAME) $(BONUSSRC:%=%.o)
 clean:	# Remove compiled binary object files
-	$(RM) $(SRCS:%=%.o) main.o
+	$(RM) $(SRCS:%=%.o) main.o $(BONUSSRC:%=%.o)
 fclean: clean	# Remove all compiled binaries
-	$(RM) $(NAME) $(TESTER)
+	$(RM) $(NAME) $(TESTER) $(BONUSTESTER)
 re: fclean all	# Re-compile all targets
 
 check: $(TESTER)	# Run automated tests on the target
@@ -57,6 +62,11 @@ check: $(TESTER)	# Run automated tests on the target
 	|| (echo "$(red)[KO] Test libasm FAIL$(clr)"; exit 1)
 $(TESTER): $(NAME) $(TESTER).c
 	$(CC) $(CFLAGS) $(TESTER).c -o $(TESTER) $(LDFLAGS)
+
+check-bonus: $(BONUSTESTER)	# Run automated tests on bonus target
+	@(./$(BONUSTESTER))
+$(BONUSTESTER): bonus $(BONUSTESTER).c
+	$(CC) $(CFLAGS) $(BONUSTESTER).c -o $(BONUSTESTER) $(LDFLAGS)
 
 debug: $(TESTER)	# Run tester in gdb
 	@gdb --tui --command=test.gdb

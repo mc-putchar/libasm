@@ -19,7 +19,6 @@ ft_strdup:
 	mov rdi, rax
 	pop rsi
 	call ft_strcpy
-	jmp exit
 exit:
 	add rsp, STACK_SIZE
 	pop rbp
