@@ -45,7 +45,7 @@ duploop:
 
 isspace:
 	xor rax, rax
-	test r8b, 0x20 ; ' '
+	cmp r8b, 0x20 ; ' '
 	je aye
 	cmp r8b, 0xd ; whitespaces upper bound
 	jg nay
@@ -71,9 +71,9 @@ preloop:
 	jmp preloop
 
 sign:
-	test r8b, 0x2b
+	cmp r8b, 0x2b
 	je plus
-	test r8b, 0x2d
+	cmp r8b, 0x2d
 	jne convert
 	neg r10
 plus:
