@@ -23,6 +23,8 @@ check:
 	jz exit
 loop:
 	mov r12, [rbx]
+	test r12, r12
+	jz exit
 	xor r14, r14
 bubble:
 	lea r13, [r12 + 0x8]
