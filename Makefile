@@ -40,7 +40,7 @@ cyn := \033[01;36m
 wht := \033[01;37m
 clr := \033[00m
 
-.PHONY: all clean fclean re check debug bonus
+.PHONY: all bonus clean fclean re check check-mandatory check-bonus debug help
 
 $(NAME): $(SRCS:%=%.o)
 	$(AR) $(ARFLAGS) $(NAME) $(SRCS:%=%.o)
@@ -57,14 +57,18 @@ fclean: clean	# Remove all compiled binaries
 	$(RM) $(NAME) $(TESTER) $(BONUSTESTER)
 re: fclean all	# Re-compile all targets
 
-check: $(TESTER)	# Run automated tests on the target
-	@(./$(TESTER)>/dev/null && echo "$(grn)[OK] All tests PASS$(clr)") \
+check: check-mandatory check-bonus
+	@echo "$(grn)[OK] All tests PASSED$(clr)"
+
+check-mandatory: $(TESTER)	# Run automated tests on the target
+	@(./$(TESTER) && echo "$(grn)[OK] Mandatory tests PASS$(clr)") \
 	|| (echo "$(red)[KO] Test libasm FAIL$(clr)"; exit 1)
 $(TESTER): $(NAME) $(TESTER).c
 	$(CC) $(CFLAGS) $(TESTER).c -o $(TESTER) $(LDFLAGS)
 
 check-bonus: $(BONUSTESTER)	# Run automated tests on bonus target
-	@(./$(BONUSTESTER))
+	@(./$(BONUSTESTER) && echo "$(grn)[OK] Bonus tests PASS$(clr)") \
+	|| (echo "$(red)[KO] Test libasm bonus FAIL$(clr)"; exit 1)
 $(BONUSTESTER): bonus $(BONUSTESTER).c
 	$(CC) $(CFLAGS) $(BONUSTESTER).c -o $(BONUSTESTER) $(LDFLAGS)
 

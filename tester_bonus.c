@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef struct s_list {
   void *data;
@@ -16,6 +17,9 @@ extern void ft_list_remove_if(t_list **list, void *data_ref, int (*cmp)(),
 extern void ft_list_sort(t_list **begin_list, int (*cmp)());
 extern int ft_atoi_base(char *str, char *base);
 
+#include "test_cases.c"
+
+#ifdef DEBUG
 void print_list(t_list *list) {
   size_t len;
 
@@ -28,27 +32,29 @@ void print_list(t_list *list) {
   }
   printf("Size of list: %zu\n", len);
 }
+#else
+void print_list(t_list *list) {
+  (void)list;
+  return;
+}
+#endif
 
-void free_list(void *ptr) {
-  t_list **list = (t_list **)ptr;
+void free_list(t_list *list) {
   t_list *node;
   t_list *next;
 
   if (!list)
     return;
-  next = *list;
+  next = list;
   while (next) {
     node = next;
     next = node->next;
     free(node->data);
     free(node);
   }
-  *list = NULL;
 }
 
-void ft_free(void *ptr) {
-  free(ptr);
-}
+void ft_free(void *ptr) { free(ptr); }
 
 int ft_strcmp(char *str1, char *str2) {
   size_t i = 0;
@@ -127,72 +133,219 @@ int test_atoi_base(void) {
 
   int res;
 
-  if (ft_atoi_base("42", plus) || ft_atoi_base("42", space) \
-    || ft_atoi_base("42", tab) || ft_atoi_base("42", single) \
-    || ft_atoi_base("42", empty)) {
-    printf("%s\n", "Failed ft_atoi_base with invalid base");
+  if (ft_atoi_base("42", plus) || ft_atoi_base("42", space) ||
+      ft_atoi_base("42", tab) || ft_atoi_base("42", single) ||
+      ft_atoi_base("42", empty)) {
+    // dprintf(STDERR_FILENO, "%s\n", "Failed detecting invalid base");
     return (1);
   }
   res = ft_atoi_base("101010", bin);
-  printf("Bin: %d\n", res);
+  // printf("Bin: %d\n", res);
+  if (res != 42)
+    return (1);
   res = ft_atoi_base("52", oct);
-  printf("Oct: %d\n", res);
+  // printf("Oct: %d\n", res);
+  if (res != 42)
+    return (1);
   res = ft_atoi_base("42", dec);
-  printf("Dec: %d\n", res);
+  // printf("Dec: %d\n", res);
+  if (res != 42)
+    return (1);
   res = ft_atoi_base("2a", hex);
-  printf("Hex: %d\n", res);
+  // printf("Hex: %d\n", res);
+  if (res != 42)
+    return (1);
   res = ft_atoi_base("", dec);
-  printf("Empty: %d\n", res);
+  // printf("Empty: %d\n", res);
+  if (res)
+    return (1);
   res = ft_atoi_base("  --++-2a", hex);
-  printf("Negative: %d\n", res);
+  // printf("Negative: %d\n", res);
+  if (res != -42)
+    return (1);
   return (0);
 }
 
-int main(void) {
+void err_exit(char const *msg) {
+  dprintf(STDERR_FILENO, "%s\n", msg);
+  exit(1);
+}
+
+int test_ft_list_push_front(void) {
+  t_list *list;
+  t_list *node;
+  int res, i;
+
+  res = 0;
+  i = 0;
+  list = NULL;
+  while (i < N_SAMPLES) {
+    node = malloc(sizeof(t_list));
+    if (!node)
+      err_exit("Error: malloc fail");
+    node->data = strdup(g_teststr[i]);
+    if (!node->data)
+      err_exit("Error: strdup fail");
+    node->next = NULL;
+    ft_list_push_front(&list, node);
+    ++i;
+  }
+  node = list;
+  while (i-- > 0) {
+    if (strncmp((char *)node->data, g_teststr[i], strlen(g_teststr[i]))) {
+      res = 1;
+      break;
+    }
+    node = node->next;
+  }
+  free_list(list);
+  return (res);
+}
+
+static void list_pushfront(t_list **list, t_list *node) {
+  if (list && node) {
+    node->next = *list;
+    *list = node;
+  }
+}
+
+int test_ft_list_size(void) {
+  t_list *list;
+  t_list *node;
+  int res;
+  size_t i;
+
+  res = 0;
+  i = 0;
+  list = NULL;
+  while (i < N_SAMPLES) {
+    node = malloc(sizeof(t_list));
+    if (!node)
+      err_exit("Error: malloc fail");
+    node->data = strdup(g_teststr[i]);
+    if (!node->data)
+      err_exit("Error: strdup fail");
+    node->next = NULL;
+    list_pushfront(&list, node);
+    res |= (ft_list_size(list) != ++i);
+  }
+  free_list(list);
+  return (res);
+}
+
+int test_ft_list_sort(void) {
+  t_list *list, *node;
+  size_t i;
+  int res;
+
+  res = 0;
+  i = 0;
+  list = NULL;
+  ft_list_sort(&list, &ft_strcmp);
+  while (i < N_SAMPLES) {
+    node = malloc(sizeof(t_list));
+    if (!node)
+      err_exit("Error: malloc fail");
+    node->data = strdup(g_teststr[i]);
+    if (!node->data)
+      err_exit("Error: strdup fail");
+    node->next = NULL;
+    list_pushfront(&list, node);
+    ++i;
+  }
+  ft_list_sort(&list, &ft_strcmp);
+  node = list;
+  while (node->next) {
+    if (ft_strcmp((char *)node->data, (char *)node->next->data) > 0) {
+      res = 1;
+    }
+    node = node->next;
+  }
+  free_list(list);
+  return (res);
+}
+
+static int listsize(t_list *list) {
+  int i;
+
+  i = 0;
+  while (list) {
+    ++i;
+    list = list->next;
+  }
+  return (i);
+}
+
+int test_ft_list_remove_if(void) {
+  int res;
   t_list *list;
 
+  res = 0;
   list = NULL;
-  if (ft_list_size(list)) {
-    printf("%s\n", "Empty list size wrong.");
-  }
   populate_list(&list);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
   ft_list_remove_if(&list, (void *)test4, &ft_strcmp, &ft_free);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 4);
+  res |= (listsize(list) != 4);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 4);
   ft_list_remove_if(&list, (void *)test5, &ft_strcmp, &ft_free);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 3);
+  res |= (listsize(list) != 3);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 3);
   ft_list_remove_if(&list, (void *)test1, &ft_strcmp, &ft_free);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 2);
+  res |= (listsize(list) != 2);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 2);
   ft_list_remove_if(&list, (void *)test2, &ft_strcmp, &ft_free);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 1);
+  res |= (listsize(list) != 1);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 1);
   ft_list_remove_if(&list, (void *)test3, &ft_strcmp, &ft_free);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 0);
-  free_list(&list);
+  res |= (listsize(list) != 0);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 0);
+  free_list(list);
   list = NULL;
-  if (ft_list_size(list))
-    printf("%s\n", "Empty list size wrong");
   populate_list_rep(&list);
   print_list(list);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
+  res |= (listsize(list) != 5);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
   ft_list_remove_if(&list, (void *)test2, &ft_strcmp, &ft_free);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
+  res |= (listsize(list) != 5);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 5);
   ft_list_remove_if(&list, (void *)test1, &ft_strcmp, &ft_free);
-  printf("List size: %zu | expected: %d\n", ft_list_size(list), 0);
-  free_list(&list);
-  list = NULL;
-  populate_list(&list);
-  print_list(list);
-  ft_list_sort(&list, &ft_strcmp);
-  print_list(list);
-  free_list(&list);
-  list = NULL;
-  if (test_atoi_base())
+  res |= (listsize(list) != 0);
+  // printf("List size: %zu | expected: %d\n", ft_list_size(list), 0);
+  free_list(list);
+  return (res);
+}
+
+int main(void) {
+  if (test_atoi_base()) {
+    printf("%s\n", "[KO] ft_atoi_base");
     return (1);
+  }
+  printf("%s\n", "[OK] ft_atoi_base");
+  if (test_ft_list_push_front()) {
+    printf("%s\n", "[KO] ft_list_push_front");
+    return (1);
+  }
+  printf("%s\n", "[OK] ft_list_push_front");
+  if (test_ft_list_size()) {
+    printf("%s\n", "[KO] test_ft_list_size");
+    return (1);
+  }
+  printf("%s\n", "[OK] test_ft_list_size");
+  if (test_ft_list_sort()) {
+    printf("%s\n", "[KO] test_ft_list_sort");
+    return (1);
+  }
+  printf("%s\n", "[OK] test_ft_list_sort");
+  if (test_ft_list_remove_if()) {
+    printf("%s\n", "[KO] test_ft_list_remove_if");
+    return (1);
+  }
+  printf("%s\n", "[OK] test_ft_list_remove_if");
   return (0);
 }
