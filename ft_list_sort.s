@@ -15,25 +15,30 @@ ft_list_sort:
 	jz exit
 	test rdi, rdi
 	jz exit
+	mov rbx, [rdi]
+	test rbx, rbx
+	jz exit
 	mov rbx, rdi
 	mov r15, rsi
+	xor r8, r8
 	jmp loop
 check:
 	test r14, r14
 	jz exit
+	mov r8, r12
 loop:
 	mov r12, [rbx]
-	test r12, r12
-	jz exit
 	xor r14, r14
 bubble:
 	lea r13, [r12 + 0x8]
 	mov r13, [r13]
-	test r13, r13
+	cmp r13, r8
 	jz check
 	mov rdi, [r12]
 	mov rsi, [r13]
+	push r8
 	call r15
+	pop r8
 	test eax, eax
 	jns swap
 	mov r12, r13
